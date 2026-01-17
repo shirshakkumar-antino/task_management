@@ -14,7 +14,7 @@ import java.util.function.Function;
 public class JwtService {
 
     private static final String SECRET_KEY =
-            "my-secret-key-my-secret-key-my-secret-key"; // ≥32 chars
+            "my-secret-key-my-secret-key-my-secret-key"; 
 
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
