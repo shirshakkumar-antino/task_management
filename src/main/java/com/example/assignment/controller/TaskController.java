@@ -8,7 +8,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.assignment.model.ApiResponse;
-import com.example.assignment.model.Task;
+import com.example.assignment.model.TaskCreateRequest;
+import com.example.assignment.model.TaskResponse;
+import com.example.assignment.model.TaskUpdateRequest;
 import com.example.assignment.service.TaskServices;
 
 @RestController
@@ -17,12 +19,13 @@ public class TaskController {
 
     @Autowired
     private TaskServices taskServices;
+
     @PostMapping("/uploadTask")
-    public ResponseEntity<ApiResponse<Task>> uploadTask(
-            @RequestBody Task userTask) {
+    public ResponseEntity<ApiResponse<TaskResponse>> uploadTask(
+            @RequestBody TaskCreateRequest userTask) {
 
         try {
-            Task task = taskServices.uploadTask(userTask);
+            TaskResponse task = taskServices.uploadTask(userTask);
             return ResponseEntity.ok(
                     new ApiResponse<>(true, task, null)
             );
@@ -34,10 +37,12 @@ public class TaskController {
     }
 
     @GetMapping("/task")
-    public ResponseEntity<ApiResponse<List<Task>>> getTask() {
+    public ResponseEntity<ApiResponse<List<TaskResponse>>> getTask() {
 
         try {
-            List<Task> allTask = taskServices.getTasksForCurrentUser();
+            List<TaskResponse> allTask =
+                    taskServices.getTasksForCurrentUser();
+
             return ResponseEntity.ok(
                     new ApiResponse<>(true, allTask, null)
             );
@@ -49,11 +54,13 @@ public class TaskController {
     }
 
     @GetMapping("/task/{id}")
-    public ResponseEntity<ApiResponse<Task>> getTaskById(
+    public ResponseEntity<ApiResponse<TaskResponse>> getTaskById(
             @PathVariable Long id) {
 
         try {
-            Task task = taskServices.getTaskForCurrentUser(id);
+            TaskResponse task =
+                    taskServices.getTaskForCurrentUser(id);
+
             return ResponseEntity.ok(
                     new ApiResponse<>(true, task, null)
             );
@@ -61,6 +68,25 @@ public class TaskController {
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
                     .body(new ApiResponse<>(false, null, "Task not found"));
+        }
+    }
+
+    @PutMapping("/task/{id}")
+    public ResponseEntity<ApiResponse<TaskResponse>> updateTask(
+            @PathVariable Long id,
+            @RequestBody TaskUpdateRequest request) {
+
+        try {
+            TaskResponse updatedTask =
+                    taskServices.updateTask(id, request);
+
+            return ResponseEntity.ok(
+                    new ApiResponse<>(true, updatedTask, null)
+            );
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.FORBIDDEN)
+                    .body(new ApiResponse<>(false, null, e.getMessage()));
         }
     }
 }

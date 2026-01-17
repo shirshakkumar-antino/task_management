@@ -6,8 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import com.example.assignment.model.Task;
-import com.example.assignment.model.User;
+import com.example.assignment.mapper.TaskMapper;
+import com.example.assignment.model.*;
 import com.example.assignment.repository.TaskRepository;
 import com.example.assignment.repository.UserRepository;
 
@@ -20,32 +20,91 @@ public class TaskServices {
     @Autowired
     private UserRepository userRepository;
 
-    // CREATE TASK
-    public Task uploadTask(Task task) {
+    @Autowired
+    private TaskMapper taskMapper;
 
-        User user = getCurrentUser();
-        task.setUser(user);
+    public TaskResponse uploadTask(TaskCreateRequest request) {
 
-        return taskRepository.save(task);
+        User currentUser = getCurrentUser();
+
+        Task task = new Task();
+        task.setTitle(request.getTitle());
+        task.setDescription(request.getDescription());
+        task.setStatus(request.getStatus());
+        task.setPriority(request.getPriority());
+        task.setDueDate(request.getDueDate());
+
+        task.setCreatedBy(currentUser);
+        if (request.getAssignedToId() != null) {
+            User assignee = userRepository.findById(request.getAssignedToId())
+                    .orElseThrow(() -> new RuntimeException("Assigned user not found"));
+            task.setAssignedTo(assignee);
+        }
+
+        return taskMapper.toResponse(taskRepository.save(task));
     }
 
-    // GET ALL TASKS FOR LOGGED-IN USER
-    public List<Task> getTasksForCurrentUser() {
-
-        User user = getCurrentUser();
-        return taskRepository.findByUserId(user.getId());
-    }
-
-    // GET SINGLE TASK BY ID (SECURE)
-    public Task getTaskForCurrentUser(Long taskId) {
+    public List<TaskResponse> getTasksForCurrentUser() {
 
         User user = getCurrentUser();
 
-        return taskRepository
-                .findByIdAndUserId(taskId, user.getId())
-                .orElseThrow(() ->
-                        new RuntimeException("Task not found or access denied"));
+        List<Task> tasks =
+                "ADMIN".equals(user.getRole())
+                        ? taskRepository.findAll()
+                        : taskRepository.findByCreatedByIdOrAssignedToId(user.getId(),user.getId());
+
+        return tasks.stream()
+                .map(taskMapper::toResponse)
+                .toList();
     }
+
+    public TaskResponse getTaskForCurrentUser(Long taskId) {
+
+        User user = getCurrentUser();
+
+        Task task = taskRepository
+                .findByIdAndCreatedById(taskId, user.getId())
+                .orElseThrow(() -> new RuntimeException("Task not found"));
+
+        return taskMapper.toResponse(task);
+    }
+
+    public TaskResponse updateTask(Long taskId, TaskUpdateRequest request) {
+
+        User currentUser = getCurrentUser();
+
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found"));
+
+        boolean isCreator =
+                task.getCreatedBy().getId().equals(currentUser.getId());
+
+        boolean isAdmin =
+                "ADMIN".equals(currentUser.getRole());
+
+        boolean isAssignee =
+                task.getAssignedTo() != null &&
+                task.getAssignedTo().getId().equals(currentUser.getId());
+
+        if (isCreator || isAdmin) {
+
+            task.setTitle(request.getTitle());
+            task.setDescription(request.getDescription());
+            task.setPriority(request.getPriority());
+            task.setDueDate(request.getDueDate());
+            task.setStatus(request.getStatus());
+
+        } else if (isAssignee) {
+
+            task.setStatus(request.getStatus());
+
+        } else {
+            throw new RuntimeException("Not authorized to update this task");
+        }
+
+        return taskMapper.toResponse(taskRepository.save(task));
+    }
+
     private User getCurrentUser() {
 
         String email = SecurityContextHolder
