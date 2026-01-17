@@ -89,4 +89,14 @@ public class TaskController {
                     .body(new ApiResponse<>(false, null, e.getMessage()));
         }
     }
+
+    @DeleteMapping("/task/{id}")
+    public ResponseEntity<ApiResponse<String>> deleteTask(@PathVariable Long id) {
+
+        taskServices.deleteTask(id);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Task deleted successfully", null)
+        );
+    }
 }

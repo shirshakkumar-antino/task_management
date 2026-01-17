@@ -105,6 +105,26 @@ public class TaskServices {
         return taskMapper.toResponse(taskRepository.save(task));
     }
 
+public void deleteTask(Long taskId) {
+
+    User currentUser = getCurrentUser();
+
+    Task task = taskRepository.findById(taskId)
+            .orElseThrow(() -> new RuntimeException("Task not found"));
+
+    boolean isCreator =
+            task.getCreatedBy().getId().equals(currentUser.getId());
+
+    boolean isAdmin =
+            "ADMIN".equals(currentUser.getRole());
+
+    if (isCreator || isAdmin) {
+        taskRepository.delete(task);
+    } else {
+        throw new RuntimeException("Not authorized to delete this task");
+    }
+}
+
     private User getCurrentUser() {
 
         String email = SecurityContextHolder
