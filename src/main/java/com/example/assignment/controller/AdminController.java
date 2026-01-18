@@ -12,14 +12,13 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 import com.example.assignment.model.ApiResponse;
 import com.example.assignment.model.UserRequest;
 import com.example.assignment.model.UserResponse;
 import com.example.assignment.service.AdminService;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/v1/admin")
 public class AdminController {
 
     @Autowired
