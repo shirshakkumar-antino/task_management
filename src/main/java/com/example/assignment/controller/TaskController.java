@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import com.example.assignment.model.ApiResponse;
 import com.example.assignment.model.TaskCreateRequest;
 import com.example.assignment.model.TaskResponse;
+import com.example.assignment.model.TaskStatsResponse;
 import com.example.assignment.model.TaskUpdateRequest;
 import com.example.assignment.service.TaskServices;
 
@@ -99,4 +100,14 @@ public class TaskController {
                 new ApiResponse<>(true, "Task deleted successfully", null)
         );
     }
+    @GetMapping("/task/stats")
+    public ResponseEntity<ApiResponse<TaskStatsResponse>> getTaskStats() {
+
+        TaskStatsResponse stats = taskServices.getTaskStats();
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, stats, null)
+        );
+    }
+
 }

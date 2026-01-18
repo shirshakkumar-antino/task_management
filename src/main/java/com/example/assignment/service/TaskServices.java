@@ -1,6 +1,7 @@
 package com.example.assignment.service;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -135,4 +136,53 @@ public void deleteTask(Long taskId) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
+public TaskStatsResponse getTaskStats() {
+
+    User currentUser = getCurrentUser();
+    boolean isAdmin = "ADMIN".equals(currentUser.getRole());
+
+    TaskStatsResponse response = new TaskStatsResponse();
+
+    if (isAdmin) {
+
+        response.setTotalTasks(taskRepository.count());
+        response.setCompletedTasks(taskRepository.countByStatus("COMPLETED"));
+        response.setPendingTasks(taskRepository.countByStatus("OPEN"));
+
+        response.setTasksByPriority(
+                Map.of(
+                        "HIGH", taskRepository.countByPriority("HIGH"),
+                        "MEDIUM", taskRepository.countByPriority("MEDIUM"),
+                        "LOW", taskRepository.countByPriority("LOW")
+                )
+        );
+
+    } else {
+
+        Long userId = currentUser.getId();
+
+        response.setTotalTasks(
+                taskRepository.countByStatusForUser("OPEN", userId)
+              + taskRepository.countByStatusForUser("COMPLETED", userId)
+        );
+
+        response.setCompletedTasks(
+                taskRepository.countByStatusForUser("COMPLETED", userId)
+        );
+
+        response.setPendingTasks(
+                taskRepository.countByStatusForUser("OPEN", userId)
+        );
+
+        response.setTasksByPriority(
+                Map.of(
+                        "HIGH", taskRepository.countByPriorityForUser("HIGH", userId),
+                        "MEDIUM", taskRepository.countByPriorityForUser("MEDIUM", userId),
+                        "LOW", taskRepository.countByPriorityForUser("LOW", userId)
+                )
+        );
+    }
+    return response;
+}
+
 }
