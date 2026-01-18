@@ -15,6 +15,8 @@ public class JwtService {
 
     private static final String SECRET_KEY =
             "my-secret-key-my-secret-key-my-secret-key"; 
+    private static final long ACCESS_TOKEN_EXPIRATION = 15 * 60 * 1000; 
+
 
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
@@ -42,8 +44,11 @@ public class JwtService {
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 3600000))
+                .setExpiration(
+                    new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRATION)
+                )
                 .signWith(getSigningKey())
                 .compact();
     }
+
 }

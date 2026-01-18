@@ -2,17 +2,26 @@ package com.example.assignment.controller;
 
 import com.example.assignment.config.JwtService;
 import com.example.assignment.model.ApiResponse;
+import com.example.assignment.model.LoginRequest;
 import com.example.assignment.model.LoginResponse;
+import com.example.assignment.model.RefreshToken;
+import com.example.assignment.model.RefreshTokenRequest;
+import com.example.assignment.model.RefreshTokenResponse;
 import com.example.assignment.model.User;
 import com.example.assignment.repository.UserRepository;
+import com.example.assignment.service.RefreshTokenService;
+
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.autoconfigure.WebMvcProperties.Apiversion.Use;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,7 +33,7 @@ public class AuthController {
     private AuthenticationManager authenticationManager;
 
     @Autowired
-    private UserDetailsService userDetailsService;
+    private RefreshTokenService refreshTokenService;
 
     @Autowired
     private JwtService jwtService;
@@ -36,41 +45,41 @@ public class AuthController {
     private PasswordEncoder passwordEncoder;
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<LoginResponse>> login(
-            @RequestBody User request) {
+    public ResponseEntity<LoginResponse> login(
+            @RequestBody LoginRequest request) {
 
-        try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            request.getEmail(),
-                            request.getPassword()
-                    )
-            );
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()
+                )
+        );
 
-            User user = userRepository.findByEmail(request.getEmail())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository
+                .findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-            UserDetails userDetails =
-                    userDetailsService.loadUserByUsername(user.getEmail());
+        String accessToken = jwtService.generateToken(
+                new org.springframework.security.core.userdetails.User(
+                        user.getEmail(),
+                        user.getPassword(),
+                        List.of(() -> "ROLE_" + user.getRole())
+                )
+        );
 
-            String token = jwtService.generateToken(userDetails);
+        RefreshToken refreshToken =
+                refreshTokenService.createRefreshToken(user);
 
-            LoginResponse authResponse = new LoginResponse(
-                    token,
-                    user.getId(),
-                    user.getName(),
-                    user.getEmail(),
-                    user.getRole()
-            );
-
-            return ResponseEntity.ok(
-                    new ApiResponse<>(true, authResponse, null)
-            );
-
-        } catch (BadCredentialsException ex) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ApiResponse<>(false, null, "Invalid email or password"));
-        }
+        return ResponseEntity.ok(
+                new LoginResponse(
+                        accessToken,
+                        refreshToken.getToken(),
+                        user.getId(),
+                        user.getName(),
+                        user.getEmail(),
+                        user.getRole()
+                )
+        );
     }
 
     @PostMapping("/register")
@@ -89,4 +98,34 @@ public class AuthController {
                 new ApiResponse<>(true, "User registered successfully", null)
         );
     }
+
+    @PostMapping("/refresh")
+        public ResponseEntity<RefreshTokenResponse> refreshToken(
+                @RequestBody RefreshTokenRequest request) {
+
+        RefreshToken refreshToken =
+                refreshTokenService
+                        .getByToken(request.getRefreshToken())
+                        .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
+
+        refreshTokenService.verifyExpiration(refreshToken);
+
+        User user = refreshToken.getUser();
+
+        String newAccessToken = jwtService.generateToken(
+                new org.springframework.security.core.userdetails.User(
+                        user.getEmail(),
+                        user.getPassword(),
+                        List.of(() -> "ROLE_" + user.getRole())
+                )
+        );
+
+        return ResponseEntity.ok(
+                new RefreshTokenResponse(
+                        newAccessToken,
+                        refreshToken.getToken()
+                )
+        );
+        }
+
 }
