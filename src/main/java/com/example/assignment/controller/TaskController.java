@@ -14,7 +14,7 @@ import com.example.assignment.model.TaskUpdateRequest;
 import com.example.assignment.service.TaskServices;
 
 @RestController
-@RequestMapping("/api/v1/task")
+@RequestMapping("/api/v1")
 public class TaskController {
 
     @Autowired

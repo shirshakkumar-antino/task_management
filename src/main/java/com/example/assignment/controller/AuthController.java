@@ -122,4 +122,28 @@ public class AuthController {
         );
         }
 
+        @PostMapping("/logout")
+        public ResponseEntity<ApiResponse<String>> logout(
+                @RequestHeader("Authorization") String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ApiResponse<>(false, null, "Invalid token"));
+        }
+
+        String accessToken = authHeader.substring(7);
+        String email = jwtService.extractUsername(accessToken);
+
+        User user = userRepository
+                .findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        refreshTokenService.deleteByUser(user);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Logged out successfully", null)
+        );
+        }
+
+
 }

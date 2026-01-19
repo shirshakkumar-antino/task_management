@@ -3,6 +3,9 @@ package com.example.assignment.service;
 import com.example.assignment.model.RefreshToken;
 import com.example.assignment.model.User;
 import com.example.assignment.repository.RefreshTokenRepository;
+
+import jakarta.transaction.Transactional;
+
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -38,6 +41,11 @@ public class RefreshTokenService {
     }
         public Optional<RefreshToken> getByToken(String token) {
         return refreshTokenRepository.findByToken(token);
+    }
+
+    @Transactional
+    public void deleteByUser(User user) {
+        refreshTokenRepository.deleteByUser(user);
     }
 
 }
