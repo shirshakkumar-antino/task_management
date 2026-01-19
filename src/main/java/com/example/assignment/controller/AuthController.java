@@ -55,7 +55,7 @@ public class AuthController {
 
         String accessToken = jwtService.generateToken(
                 new org.springframework.security.core.userdetails.User(
-                        user.getEmail(),
+                                        user.getEmail(),
                         user.getPassword(),
                         List.of(() -> "ROLE_" + user.getRole())
                 )
@@ -76,22 +76,44 @@ public class AuthController {
         );
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<ApiResponse<String>> register(
-            @RequestBody User user) {
+@PostMapping("/register")
+public ResponseEntity<ApiResponse<String>> register(@RequestBody User user) {
 
-        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ApiResponse<>(false, null, "Email already exists"));
-        }
-
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        userRepository.save(user);
-
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "User registered successfully", null)
-        );
+    if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(false, null, "Email already exists"));
     }
+
+    String password = user.getPassword();
+
+    if (password == null || password.length() < 8) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(false, null, "Password must be at least 8 characters long"));
+    }
+
+    if (!password.matches(".*[A-Z].*")) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(false, null, "Password must contain at least one uppercase letter"));
+    }
+
+    if (!password.matches(".*[a-z].*")) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(false, null, "Password must contain at least one lowercase letter"));
+    }
+
+    if (!password.matches(".*\\d.*")) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(false, null, "Password must contain at least one number"));
+    }
+
+    user.setPassword(passwordEncoder.encode(password));
+
+    userRepository.save(user);
+
+    return ResponseEntity.ok(
+            new ApiResponse<>(true, "User registered successfully", null)
+    );
+}
 
     @PostMapping("/refresh")
         public ResponseEntity<RefreshTokenResponse> refreshToken(
